@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Text;
 using DapperCodeGenerator.Core.Extensions;
 using DapperCodeGenerator.Core.Models;
@@ -7,10 +7,13 @@ namespace DapperCodeGenerator.Core.Generators
 {
     public static class DapperGenerator
     {
-        const string ConnectionStringPlaceholder = "\"<ConnectionString>\"";
-        
+        const string ConnectionStringPlaceholder = "ConnectionName";
+        private static string ConnectionStringName = "ConnectionName";
+
         public static string GenerateDapperFromDatabase(Database database, string defaultNamespace = "DapperCodeGenerator.Repositories")
         {
+            ConnectionStringName = $"{ConnectionStringPlaceholder}.{database.DatabaseName}";
+
             var stringBuilder = new StringBuilder();
 
             stringBuilder.AppendLine($"namespace {defaultNamespace}");
@@ -75,12 +78,12 @@ namespace DapperCodeGenerator.Core.Generators
                 var sqlWhereClauses = primaryKeyColumns.GetSqlWhereClauses();
                 var dapperProperties = primaryKeyColumns.GetDapperProperties();
 
-                stringBuilder.AppendLine($"{PadBy(2)}public async Task<{table.DataModelName}> Get({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(2)}public async Task<{table.DataModelName}> ObterPorId(int {table.DataModelName.ToLower()}Id)");
                 stringBuilder.AppendLine($"{PadBy(2)}{{");
-                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
                 stringBuilder.AppendLine($"{PadBy(3)}{{");
                 stringBuilder.AppendLine($"{PadBy(4)}const string getQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
-                stringBuilder.AppendLine($"{PadBy(4)}return db.QuerySingleAsync<{table.DataModelName}>(getQuery, new {{ {dapperProperties} }});");
+                stringBuilder.AppendLine($"{PadBy(4)}return await  db.QuerySingleAsync<{table.DataModelName}>(getQuery, new {{ {dapperProperties} }});");
                 stringBuilder.AppendLine($"{PadBy(3)}}}");
                 stringBuilder.AppendLine($"{PadBy(2)}}}");
             }
@@ -92,12 +95,12 @@ namespace DapperCodeGenerator.Core.Generators
 
         private static void GenerateDapperFindMethodsFromTable(StringBuilder stringBuilder, DatabaseTable table)
         {
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FindAll()");
+            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> BuscarTodos()");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
             stringBuilder.AppendLine($"{PadBy(3)}{{");
             stringBuilder.AppendLine($"{PadBy(4)}const string findAllQuery = \"SELECT * FROM {table.TableName}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = db.QueryAsync<{table.DataModelName}>(findAllQuery);");
+            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findAllQuery);");
             stringBuilder.AppendLine($"{PadBy(4)}return results;");
             stringBuilder.AppendLine($"{PadBy(3)}}}");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
@@ -108,25 +111,25 @@ namespace DapperCodeGenerator.Core.Generators
             var sqlWhereClauses = table.Columns.GetSqlWhereClauses(parametersAreOptional: true);
             var dapperProperties = table.Columns.GetDapperProperties();
 
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FindByAll({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FiltrarTodos({table.DataModelName} {table.DataModelName.ToLower()})");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
             stringBuilder.AppendLine($"{PadBy(3)}{{");
             stringBuilder.AppendLine($"{PadBy(4)}const string findByAllQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = db.QueryAsync<{table.DataModelName}>(findByAllQuery, new {{ {dapperProperties} }});");
+            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findByAllQuery,{table.DataModelName.ToLower()});");
             stringBuilder.AppendLine($"{PadBy(4)}return results;");
             stringBuilder.AppendLine($"{PadBy(3)}}}");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
 
             stringBuilder.AppendLine();
             
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FindByAny({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(2)}public async Task<IEnumerable<{table.DataModelName}>> FiltrarQualquer({table.DataModelName} {table.DataModelName.ToLower()})");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
             stringBuilder.AppendLine($"{PadBy(3)}{{");
             // TODO: string replace is not ideal, should separate cases better
             stringBuilder.AppendLine($"{PadBy(4)}const string findByAnyQuery = \"SELECT * FROM {table.TableName} WHERE {sqlWhereClauses.Replace(" AND ", " OR ").Replace("IS NULL OR", "IS NOT NULL AND")}\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var results = db.QueryAsync<{table.DataModelName}>(findByAnyQuery, new {{ {dapperProperties} }});");
+            stringBuilder.AppendLine($"{PadBy(4)}var results = await db.QueryAsync<{table.DataModelName}>(findByAnyQuery, {table.DataModelName.ToLower()});");
             stringBuilder.AppendLine($"{PadBy(4)}return results;");
             stringBuilder.AppendLine($"{PadBy(3)}}}");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
@@ -139,12 +142,12 @@ namespace DapperCodeGenerator.Core.Generators
             var sqlInsertValues = table.Columns.GetSqlInsertValues();
             var dapperParameters = table.Columns.GetDapperProperties();
 
-            stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Create({methodParameters})");
+            stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Inserir({table.DataModelName} {table.DataModelName.ToLower()})");
             stringBuilder.AppendLine($"{PadBy(2)}{{");
-            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+            stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
             stringBuilder.AppendLine($"{PadBy(3)}{{");
             stringBuilder.AppendLine($"{PadBy(4)}const string insertQuery = \"INSERT INTO {table.TableName} ({columnNames}) VALUES ({sqlInsertValues})\";");
-            stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = db.ExecuteAsync<{table.DataModelName}>(insertQuery, new {{ {dapperParameters} }});");
+            stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteAsync(insertQuery, {table.DataModelName.ToLower()});");
             stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
             stringBuilder.AppendLine($"{PadBy(3)}}}");
             stringBuilder.AppendLine($"{PadBy(2)}}}");
@@ -162,12 +165,12 @@ namespace DapperCodeGenerator.Core.Generators
                 var sqlWhereClausesForPrimaryKeys = primaryKeyColumns.GetSqlWhereClauses();
                 var dapperParametersForPrimaryKeys = primaryKeyColumns.GetDapperProperties();
 
-                stringBuilder.AppendLine($"{PadBy(2)}public Task<int> Update({methodParameters})");
+                stringBuilder.AppendLine($"{PadBy(2)}public async Task<int> Atualizar({table.DataModelName} {table.DataModelName.ToLower()})");
                 stringBuilder.AppendLine($"{PadBy(2)}{{");
-                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringPlaceholder}))");
+                stringBuilder.AppendLine($"{PadBy(3)}using (IDbConnection db = new SqlConnection({ConnectionStringName}))");
                 stringBuilder.AppendLine($"{PadBy(3)}{{");
                 stringBuilder.AppendLine($"{PadBy(4)}const string updateQuery = \"UPDATE {table.TableName} SET {sqlWhereClauses} WHERE {sqlWhereClausesForPrimaryKeys}\";");
-                stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = db.ExecuteAsync<{table.DataModelName}>(updateQuery, new {{ {dapperParametersForPrimaryKeys} }});");
+                stringBuilder.AppendLine($"{PadBy(4)}var rowsAffected = await db.ExecuteAsync(updateQuery, {table.DataModelName.ToLower()});");
                 stringBuilder.AppendLine($"{PadBy(4)}return rowsAffected;");
                 stringBuilder.AppendLine($"{PadBy(3)}}}");
                 stringBuilder.AppendLine($"{PadBy(2)}}}");
