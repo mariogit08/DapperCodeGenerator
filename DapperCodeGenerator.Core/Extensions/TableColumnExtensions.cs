@@ -10,7 +10,8 @@ namespace DapperCodeGenerator.Core.Extensions
     {
         public static string GetColumnNameAsParameter(this DatabaseTableColumn tableColumn)
         {
-            return $"{char.ToLowerInvariant(tableColumn.ColumnName[0])}{tableColumn.ColumnName.Substring(1)}";
+            var asd = tableColumn.ColumnName.FirstCharToLower();
+            return tableColumn.ColumnName.FirstCharToLower();
         }
 
         public static string GetMethodParameters(this IEnumerable<DatabaseTableColumn> tableColumns, bool parametersAreOptional = false)
@@ -18,7 +19,7 @@ namespace DapperCodeGenerator.Core.Extensions
             var methodParametersBuilder = new StringBuilder();
 
             var tableColumnsCount = tableColumns.Count();
-            for(var i = 0; i < tableColumnsCount; i++)
+            for (var i = 0; i < tableColumnsCount; i++)
             {
                 var column = tableColumns.ElementAt(i);
                 var columnCodingType = column.Type.GetNameForCoding();
@@ -29,7 +30,7 @@ namespace DapperCodeGenerator.Core.Extensions
                 }
 
                 methodParametersBuilder.Append($"{columnCodingType} {column.GetColumnNameAsParameter()}");
-                
+
                 if (i < tableColumnsCount - 1)
                 {
                     methodParametersBuilder.Append(", ");
@@ -38,7 +39,7 @@ namespace DapperCodeGenerator.Core.Extensions
 
             return methodParametersBuilder.ToString();
         }
-        
+
         public static string GetSqlWhereClauses(this IEnumerable<DatabaseTableColumn> tableColumns, string dbParameterCharacter = "@", bool parametersAreOptional = false)
         {
             var sqlBuilder = new StringBuilder();
@@ -48,7 +49,7 @@ namespace DapperCodeGenerator.Core.Extensions
             {
                 var column = tableColumns.ElementAt(i);
                 var columnNameAsParameter = column.GetColumnNameAsParameter();
-                
+
                 if (parametersAreOptional)
                 {
                     sqlBuilder.Append($"({dbParameterCharacter}{columnNameAsParameter} IS NULL OR {column.ColumnName} = {dbParameterCharacter}{columnNameAsParameter})");
@@ -57,7 +58,7 @@ namespace DapperCodeGenerator.Core.Extensions
                 {
                     sqlBuilder.Append($"{column.ColumnName} = {dbParameterCharacter}{columnNameAsParameter}");
                 }
-                
+
                 if (i < tableColumnsCount - 1)
                 {
                     sqlBuilder.Append(", ");
